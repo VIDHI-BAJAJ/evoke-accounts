@@ -4,8 +4,9 @@ import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/StatusBadge";
 import { getInvoices, getClients } from "@/lib/store";
 import { formatCurrency } from "@/lib/constants";
-import { Plus, Users, FileText, IndianRupee, AlertCircle } from "lucide-react";
+import { Plus, Users, FileText, IndianRupee, AlertCircle, TrendingUp } from "lucide-react";
 import { useMemo } from "react";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 
 export default function Dashboard() {
   const invoices = getInvoices();
@@ -28,99 +29,145 @@ export default function Dashboard() {
       totalMonth: monthInvoices.reduce((s, i) => s + i.total, 0),
       paid: invoices.filter((i) => i.status === "paid").reduce((s, i) => s + i.total, 0),
       unpaid: invoices.filter((i) => i.status === "unpaid" || i.status === "overdue").reduce((s, i) => s + i.total, 0),
-      overdue: invoices.filter((i) => i.status === "overdue").length,
     };
+  }, [invoices]);
+
+  const chartData = useMemo(() => {
+    const months = ["Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec", "Jan", "Feb", "Mar"];
+    const now = new Date();
+    const fyStartYear = now.getMonth() >= 3 ? now.getFullYear() : now.getFullYear() - 1;
+    return months.map((name, i) => {
+      const monthIdx = (i + 3) % 12;
+      const year = monthIdx < 3 ? fyStartYear + 1 : fyStartYear;
+      const total = invoices
+        .filter((inv) => {
+          const d = new Date(inv.invoice_date);
+          return d.getMonth() === monthIdx && d.getFullYear() === year;
+        })
+        .reduce((s, inv) => s + inv.total, 0);
+      return { name, total };
+    });
   }, [invoices]);
 
   const recentInvoices = invoices
     .sort((a, b) => new Date(b.invoice_date).getTime() - new Date(a.invoice_date).getTime())
     .slice(0, 5);
 
+  const statCards = [
+    { label: "This Month", value: stats.totalMonth, icon: FileText, color: "text-primary" },
+    { label: "This FY", value: stats.totalFY, icon: TrendingUp, color: "text-primary" },
+    { label: "Paid", value: stats.paid, icon: IndianRupee, color: "text-success" },
+    { label: "Unpaid", value: stats.unpaid, icon: AlertCircle, color: "text-warning" },
+  ];
+
   return (
     <div className="space-y-6">
+      {/* Quick Actions */}
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
+        <h2 className="text-xl font-semibold text-foreground">Overview</h2>
         <div className="flex gap-2">
-          <Button asChild>
+          <Button asChild className="bg-gradient-to-r from-primary to-violet-700 hover:from-violet-700 hover:to-primary text-primary-foreground shadow-md">
             <Link to="/invoices/new">
               <Plus className="mr-1 h-4 w-4" /> New Invoice
             </Link>
           </Button>
           <Button asChild variant="outline">
             <Link to="/clients">
-              <Users className="mr-1 h-4 w-4" /> Clients
+              <Users className="mr-1 h-4 w-4" /> Add Client
             </Link>
           </Button>
         </div>
       </div>
 
+      {/* Stat Cards */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">This Month</CardTitle>
-            <FileText className="h-4 w-4 text-muted-foreground" />
+        {statCards.map((s) => (
+          <Card key={s.label} className="shadow-sm">
+            <CardContent className="pt-6">
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">{s.label}</p>
+                  <p className={`text-2xl font-bold mt-1 ${s.color === "text-primary" ? "" : s.color}`}>
+                    {formatCurrency(s.value)}
+                  </p>
+                </div>
+                <div className={`p-2.5 rounded-xl bg-muted ${s.color}`}>
+                  <s.icon className="h-5 w-5" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {/* Two column layout */}
+      <div className="grid gap-6 lg:grid-cols-5">
+        {/* Recent Invoices */}
+        <Card className="lg:col-span-3 shadow-sm">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base">Recent Invoices</CardTitle>
+              <Button asChild variant="ghost" size="sm" className="text-primary">
+                <Link to="/invoices">View All</Link>
+              </Button>
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(stats.totalMonth)}</div>
+            {recentInvoices.length > 0 ? (
+              <div className="space-y-2">
+                {recentInvoices.map((inv) => {
+                  const client = clients.find((c) => c.id === inv.client_id);
+                  return (
+                    <Link
+                      key={inv.id}
+                      to={`/invoices/${inv.id}`}
+                      className="flex items-center justify-between rounded-lg border p-3 hover:bg-muted/50 transition-colors"
+                    >
+                      <div>
+                        <p className="font-medium text-sm">{inv.invoice_number}</p>
+                        <p className="text-xs text-muted-foreground">{client?.company_name || client?.name}</p>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="font-semibold text-sm">{formatCurrency(inv.total)}</span>
+                        <StatusBadge status={inv.status} />
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="text-center py-12">
+                <FileText className="h-12 w-12 mx-auto text-muted-foreground/30 mb-3" />
+                <p className="text-muted-foreground">No invoices yet. Create your first invoice.</p>
+                <Button asChild variant="outline" size="sm" className="mt-3">
+                  <Link to="/invoices/new">Create Invoice</Link>
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">This FY</CardTitle>
-            <IndianRupee className="h-4 w-4 text-muted-foreground" />
+
+        {/* Revenue Chart */}
+        <Card className="lg:col-span-2 shadow-sm">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Monthly Revenue</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(stats.totalFY)}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Paid</CardTitle>
-            <IndianRupee className="h-4 w-4 text-success" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-success">{formatCurrency(stats.paid)}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Unpaid</CardTitle>
-            <AlertCircle className="h-4 w-4 text-warning" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-warning">{formatCurrency(stats.unpaid)}</div>
+            <ResponsiveContainer width="100%" height={250}>
+              <BarChart data={chartData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                <XAxis dataKey="name" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
+                <YAxis tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
+                <Tooltip
+                  formatter={(value: number) => [formatCurrency(value), "Revenue"]}
+                  contentStyle={{ borderRadius: 8, border: "1px solid hsl(var(--border))", fontSize: 12 }}
+                />
+                <Bar dataKey="total" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
           </CardContent>
         </Card>
       </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Recent Invoices</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            {recentInvoices.map((inv) => {
-              const client = clients.find((c) => c.id === inv.client_id);
-              return (
-                <Link
-                  key={inv.id}
-                  to={`/invoices/${inv.id}`}
-                  className="flex items-center justify-between rounded-lg border p-3 hover:bg-muted/50 transition-colors"
-                >
-                  <div>
-                    <p className="font-medium text-sm">{inv.invoice_number}</p>
-                    <p className="text-xs text-muted-foreground">{client?.company_name || client?.name}</p>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span className="font-semibold text-sm">{formatCurrency(inv.total)}</span>
-                    <StatusBadge status={inv.status} />
-                  </div>
-                </Link>
-              );
-            })}
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 }

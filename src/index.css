@@ -6,50 +6,50 @@
 
 @layer base {
   :root {
-    --background: 0 0% 98%;
-    --foreground: 240 10% 10%;
+    --background: 228 25% 97%;
+    --foreground: 240 24% 14%;
 
     --card: 0 0% 100%;
-    --card-foreground: 240 10% 10%;
+    --card-foreground: 240 24% 14%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 240 10% 10%;
+    --popover-foreground: 240 24% 14%;
 
-    --primary: 263 70% 58%;
+    --primary: 263 70% 50%;
     --primary-foreground: 0 0% 100%;
 
     --secondary: 263 30% 95%;
     --secondary-foreground: 263 70% 35%;
 
-    --muted: 240 5% 94%;
-    --muted-foreground: 240 5% 45%;
+    --muted: 220 14% 96%;
+    --muted-foreground: 215 16% 47%;
 
-    --accent: 263 30% 93%;
-    --accent-foreground: 263 70% 35%;
+    --accent: 263 55% 72%;
+    --accent-foreground: 263 70% 25%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --success: 142 76% 36%;
+    --success: 160 84% 39%;
     --success-foreground: 0 0% 100%;
 
     --warning: 38 92% 50%;
     --warning-foreground: 0 0% 100%;
 
-    --border: 240 6% 90%;
-    --input: 240 6% 90%;
-    --ring: 263 70% 58%;
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 263 70% 50%;
 
-    --radius: 0.5rem;
+    --radius: 0.625rem;
 
-    --sidebar-background: 263 70% 12%;
-    --sidebar-foreground: 263 10% 90%;
-    --sidebar-primary: 263 70% 58%;
+    --sidebar-background: 240 33% 8%;
+    --sidebar-foreground: 214 32% 91%;
+    --sidebar-primary: 263 70% 50%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 263 40% 20%;
-    --sidebar-accent-foreground: 263 10% 95%;
-    --sidebar-border: 263 30% 22%;
-    --sidebar-ring: 263 70% 58%;
+    --sidebar-accent: 263 50% 18%;
+    --sidebar-accent-foreground: 0 0% 95%;
+    --sidebar-border: 240 20% 16%;
+    --sidebar-ring: 263 70% 50%;
   }
 }
 
@@ -66,19 +66,20 @@
 
 @layer utilities {
   .status-paid {
-    @apply bg-green-100 text-green-700 border-green-200;
+    @apply bg-emerald-50 text-emerald-700 border-emerald-200;
   }
   .status-unpaid {
-    @apply bg-yellow-100 text-yellow-700 border-yellow-200;
+    @apply bg-amber-50 text-amber-700 border-amber-200;
   }
   .status-overdue {
-    @apply bg-red-100 text-red-700 border-red-200;
+    @apply bg-red-50 text-red-700 border-red-200;
   }
   .status-draft {
-    @apply bg-gray-100 text-gray-600 border-gray-200;
+    @apply bg-slate-100 text-slate-600 border-slate-200;
   }
 }
 
+/* Print styles - hide everything except the invoice */
 @media print {
   body * {
     visibility: hidden;
