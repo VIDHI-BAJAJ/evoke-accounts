@@ -1,5 +1,5 @@
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { getInvoice, getPayments, savePayment, getTotalPaid, getInvoices } from "@/lib/store";
+import { getInvoice, getPayments, savePayment, getTotalPaid } from "@/lib/store";
 import { COMPANY, formatCurrency, PAYMENT_MODES } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -10,10 +10,10 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { ArrowLeft, Download, Pencil, CreditCard, MessageCircle } from "lucide-react";
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { toast } from "sonner";
 import { Payment } from "@/lib/types";
-import logo from "@/assets/ai-evoked-logo.png";
+import logoColor from "@/assets/ai-evoked-logo.png";
 
 export default function InvoicePreview() {
   const { id } = useParams();
@@ -32,17 +32,43 @@ export default function InvoicePreview() {
   const balance = invoice.total - totalPaid;
   const isSameState = client?.state_code === COMPANY.stateCode;
 
-  function handlePrint() {
-    window.print();
+  async function handleDownloadPDF() {
+    const element = document.getElementById("invoice-print-area");
+    if (!element) return;
+    
+    toast.info("Generating PDF...");
+    
+    try {
+      const html2canvas = (await import("html2canvas")).default;
+      const jsPDF = (await import("jspdf")).default;
+      
+      const canvas = await html2canvas(element, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: "#ffffff",
+        width: 794,
+      });
+      
+      const imgData = canvas.toDataURL("image/png");
+      const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+      pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
+      pdf.save(`${invoice.invoice_number.replace(/\//g, "_")}.pdf`);
+      toast.success("PDF downloaded");
+    } catch {
+      toast.error("Failed to generate PDF");
+    }
   }
 
   function handleWhatsApp() {
-    const text = `Invoice ${invoice.invoice_number} from AI Evoked\nAmount: ${formatCurrency(invoice.total)}\nPlease check and process the payment.`;
+    const clientName = client?.company_name || client?.name || "Client";
+    const text = `Hi ${clientName}, please find invoice ${invoice.invoice_number} for ${formatCurrency(invoice.total)} dated ${new Date(invoice.invoice_date).toLocaleDateString("en-IN")}. You can view it here: ${window.location.href}. Bank: Kotak Mahindra, A/C: ${COMPANY.bank.accountNumber}, IFSC: ${COMPANY.bank.ifsc}. Please feel free to reach out at ${COMPANY.email}`;
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 max-w-[900px] mx-auto">
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="icon" onClick={() => navigate("/invoices")}>
@@ -56,7 +82,7 @@ export default function InvoicePreview() {
           <Button variant="outline" size="sm" asChild>
             <Link to={`/invoices/${invoice.id}/edit`}><Pencil className="mr-1 h-3 w-3" /> Edit</Link>
           </Button>
-          <Button variant="outline" size="sm" onClick={handlePrint}>
+          <Button variant="outline" size="sm" onClick={handleDownloadPDF}>
             <Download className="mr-1 h-3 w-3" /> Download PDF
           </Button>
           <Button variant="outline" size="sm" onClick={handleWhatsApp}>
@@ -66,14 +92,14 @@ export default function InvoicePreview() {
       </div>
 
       {/* Printable Invoice */}
-      <div className="print-area bg-card rounded-lg border p-8 space-y-6">
+      <div id="invoice-print-area" className="print-area bg-card rounded-xl border shadow-sm p-10 space-y-6" style={{ width: 794, maxWidth: "100%", margin: "0 auto" }}>
         {/* Header */}
         <div className="flex justify-between items-start">
           <div>
             <h2 className="text-3xl font-bold text-primary">Invoice</h2>
             <p className="text-sm text-muted-foreground mt-1">{invoice.invoice_number}</p>
           </div>
-          <img src={logo} alt="AI Evoked" className="h-14 w-14 rounded-lg" />
+          <img src={logoColor} alt="AI Evoked" className="h-14 w-14 rounded-lg" />
         </div>
 
         {/* Dates */}
@@ -91,7 +117,7 @@ export default function InvoicePreview() {
         </div>
 
         {/* Billed By / To */}
-        <div className="grid sm:grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 gap-4">
           <div className="rounded-lg bg-primary/5 border border-primary/10 p-4">
             <p className="text-xs font-semibold text-primary uppercase mb-2">Billed By</p>
             <p className="font-semibold text-sm">{COMPANY.name}</p>
@@ -99,8 +125,8 @@ export default function InvoicePreview() {
             <p className="text-xs text-muted-foreground">GSTIN: {COMPANY.gstin}</p>
             <p className="text-xs text-muted-foreground">PAN: {COMPANY.pan}</p>
           </div>
-          <div className="rounded-lg bg-secondary p-4">
-            <p className="text-xs font-semibold text-secondary-foreground uppercase mb-2">Billed To</p>
+          <div className="rounded-lg bg-muted p-4">
+            <p className="text-xs font-semibold text-foreground uppercase mb-2">Billed To</p>
             {client && (
               <>
                 <p className="font-semibold text-sm">{client.company_name || client.name}</p>
@@ -116,7 +142,7 @@ export default function InvoicePreview() {
         </div>
 
         {/* Supply info */}
-        <div className="flex gap-8 text-xs text-muted-foreground">
+        <div className="flex gap-8 text-xs text-muted-foreground border-t border-b py-2">
           <span>Country of Supply: India</span>
           <span>Place of Supply: {client?.state_name || "Delhi"} ({client?.state_code || "07"})</span>
         </div>
@@ -124,7 +150,7 @@ export default function InvoicePreview() {
         {/* Items Table */}
         <Table>
           <TableHeader>
-            <TableRow>
+            <TableRow className="bg-muted/50">
               <TableHead className="text-xs">#</TableHead>
               <TableHead className="text-xs">Item</TableHead>
               <TableHead className="text-xs text-right">Qty</TableHead>
@@ -143,7 +169,7 @@ export default function InvoicePreview() {
           </TableHeader>
           <TableBody>
             {items.map((item, idx) => (
-              <TableRow key={item.id}>
+              <TableRow key={item.id} className={idx % 2 === 0 ? "" : "bg-muted/30"}>
                 <TableCell className="text-xs">{idx + 1}</TableCell>
                 <TableCell>
                   <p className="text-sm font-medium">{item.item_name}</p>
@@ -200,7 +226,7 @@ export default function InvoicePreview() {
 
       {/* Payment History */}
       {(payments.length > 0 || balance > 0) && (
-        <Card>
+        <Card className="shadow-sm">
           <CardHeader>
             <CardTitle className="text-lg">Payment History</CardTitle>
           </CardHeader>
@@ -238,6 +264,10 @@ function RecordPaymentDialog({ invoiceId, balance, onSaved }: { invoiceId: strin
   const [reference, setReference] = useState("");
 
   function handleSave() {
+    if (Number(amount) <= 0) {
+      toast.error("Please enter a valid amount");
+      return;
+    }
     const payment: Payment = {
       id: crypto.randomUUID(),
       invoice_id: invoiceId,
@@ -249,7 +279,7 @@ function RecordPaymentDialog({ invoiceId, balance, onSaved }: { invoiceId: strin
       created_at: new Date().toISOString(),
     };
     savePayment(payment);
-    toast.success("Payment recorded");
+    toast.success("Payment recorded successfully");
     setOpen(false);
     onSaved();
   }
@@ -257,7 +287,7 @@ function RecordPaymentDialog({ invoiceId, balance, onSaved }: { invoiceId: strin
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button size="sm" variant="default">
+        <Button size="sm" className="bg-gradient-to-r from-primary to-violet-700 hover:from-violet-700 hover:to-primary text-primary-foreground">
           <CreditCard className="mr-1 h-3 w-3" /> Record Payment
         </Button>
       </DialogTrigger>
@@ -265,7 +295,7 @@ function RecordPaymentDialog({ invoiceId, balance, onSaved }: { invoiceId: strin
         <DialogHeader>
           <DialogTitle>Record Payment</DialogTitle>
         </DialogHeader>
-        <div className="space-y-3">
+        <div className="space-y-4">
           <div>
             <Label>Amount (₹)</Label>
             <Input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} />
@@ -287,7 +317,9 @@ function RecordPaymentDialog({ invoiceId, balance, onSaved }: { invoiceId: strin
             <Label>Reference / UTR</Label>
             <Input value={reference} onChange={(e) => setReference(e.target.value)} placeholder="Optional" />
           </div>
-          <Button onClick={handleSave} className="w-full">Save Payment</Button>
+          <Button onClick={handleSave} className="w-full bg-gradient-to-r from-primary to-violet-700 hover:from-violet-700 hover:to-primary text-primary-foreground">
+            Record Payment
+          </Button>
         </div>
       </DialogContent>
     </Dialog>

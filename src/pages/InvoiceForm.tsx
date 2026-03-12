@@ -138,47 +138,64 @@ export default function InvoiceForm() {
 
   return (
     <div className="space-y-6 max-w-4xl">
-      <h1 className="text-2xl font-bold">{id ? "Edit Invoice" : "Create Invoice"}</h1>
+      {/* Section 1: Invoice Meta */}
+      <Card className="shadow-sm">
+        <CardHeader><CardTitle className="text-base">Invoice Details</CardTitle></CardHeader>
+        <CardContent>
+          <div className="grid gap-4 sm:grid-cols-3">
+            <div>
+              <Label>Invoice Number</Label>
+              <Input value={invoiceNumber} onChange={(e) => setInvoiceNumber(e.target.value)} />
+            </div>
+            <div>
+              <Label>Invoice Date</Label>
+              <Input type="date" value={invoiceDate} onChange={(e) => setInvoiceDate(e.target.value)} />
+            </div>
+            <div>
+              <Label>Due Date</Label>
+              <Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
-      <div className="grid gap-4 sm:grid-cols-3">
-        <div>
-          <Label>Invoice Number</Label>
-          <Input value={invoiceNumber} onChange={(e) => setInvoiceNumber(e.target.value)} />
-        </div>
-        <div>
-          <Label>Invoice Date</Label>
-          <Input type="date" value={invoiceDate} onChange={(e) => setInvoiceDate(e.target.value)} />
-        </div>
-        <div>
-          <Label>Due Date</Label>
-          <Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
-        </div>
-      </div>
+      {/* Section 2: Client */}
+      <Card className="shadow-sm">
+        <CardHeader><CardTitle className="text-base">Client</CardTitle></CardHeader>
+        <CardContent>
+          <Select value={clientId} onValueChange={setClientId}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select a client" />
+            </SelectTrigger>
+            <SelectContent>
+              {clients.map((c) => (
+                <SelectItem key={c.id} value={c.id}>
+                  {c.company_name || c.name} {c.state_code ? `(${c.state_name})` : ""}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {selectedClient && (
+            <div className="mt-3 rounded-lg border p-3 bg-muted/50">
+              <p className="text-sm font-medium">{selectedClient.company_name || selectedClient.name}</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                {selectedClient.state_name} ({selectedClient.state_code}) • GST: {isSameState ? "CGST + SGST (Intra-state)" : "IGST (Inter-state)"}
+              </p>
+              {selectedClient.gstin && <p className="text-xs text-muted-foreground">GSTIN: {selectedClient.gstin}</p>}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
-      <div>
-        <Label>Client</Label>
-        <Select value={clientId} onValueChange={setClientId}>
-          <SelectTrigger>
-            <SelectValue placeholder="Select a client" />
-          </SelectTrigger>
-          <SelectContent>
-            {clients.map((c) => (
-              <SelectItem key={c.id} value={c.id}>
-                {c.company_name || c.name} {c.state_code ? `(${c.state_name})` : ""}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        {selectedClient && (
-          <p className="text-xs text-muted-foreground mt-1">
-            GST: {isSameState ? "CGST + SGST (Intra-state)" : "IGST (Inter-state)"} • {selectedClient.state_name} ({selectedClient.state_code})
-          </p>
-        )}
-      </div>
-
-      <Card>
+      {/* Section 3: Line Items */}
+      <Card className="shadow-sm">
         <CardHeader>
-          <CardTitle className="text-lg">Line Items</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base">Line Items</CardTitle>
+            <Button variant="outline" size="sm" onClick={addItem}>
+              <Plus className="mr-1 h-4 w-4" /> Add Item
+            </Button>
+          </div>
         </CardHeader>
         <CardContent className="space-y-3">
           {items.map((item, idx) => (
@@ -229,13 +246,11 @@ export default function InvoiceForm() {
               </div>
             </div>
           ))}
-          <Button variant="outline" size="sm" onClick={addItem}>
-            <Plus className="mr-1 h-4 w-4" /> Add Item
-          </Button>
         </CardContent>
       </Card>
 
-      <Card>
+      {/* Section 4: Summary */}
+      <Card className="shadow-sm">
         <CardContent className="pt-6">
           <div className="flex flex-col items-end space-y-1 text-sm">
             <div className="flex justify-between w-64">
@@ -268,14 +283,20 @@ export default function InvoiceForm() {
         </CardContent>
       </Card>
 
-      <div>
-        <Label>Notes</Label>
-        <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Additional notes..." />
-      </div>
+      {/* Section 5: Notes */}
+      <Card className="shadow-sm">
+        <CardHeader><CardTitle className="text-base">Notes</CardTitle></CardHeader>
+        <CardContent>
+          <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Additional notes..." />
+        </CardContent>
+      </Card>
 
-      <div className="flex gap-3">
+      {/* Sticky action bar */}
+      <div className="sticky bottom-0 bg-background/95 backdrop-blur border-t -mx-4 md:-mx-6 px-4 md:px-6 py-3 flex gap-3 justify-end">
         <Button variant="outline" onClick={() => handleSave("draft")}>Save Draft</Button>
-        <Button onClick={() => handleSave("unpaid")}>Save & Preview</Button>
+        <Button onClick={() => handleSave("unpaid")} className="bg-gradient-to-r from-primary to-violet-700 hover:from-violet-700 hover:to-primary text-primary-foreground shadow-md">
+          Save & Preview
+        </Button>
       </div>
     </div>
   );
