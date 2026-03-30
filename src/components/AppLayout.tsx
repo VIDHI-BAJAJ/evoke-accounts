@@ -1,7 +1,9 @@
 import { AppSidebar } from "@/components/AppSidebar";
-import { Outlet, useLocation } from "react-router-dom";
-import { Bell, User } from "lucide-react";
+import { Outlet, useLocation, useNavigate } from "react-router-dom";
+import { Bell, LogOut } from "lucide-react";
 import { COMPANY } from "@/lib/constants";
+import { getAuthUser, logout } from "@/lib/auth";
+import { toast } from "sonner";
 
 const pageTitles: Record<string, string> = {
   "/": "Dashboard",
