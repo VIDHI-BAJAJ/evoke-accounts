@@ -55,12 +55,6 @@ export function AppLayout() {
         </main>
       </div>
     </div>
-          </div>
-        </header>
-        <main className="flex-1 p-4 md:p-6 pb-20 md:pb-6">
-          <Outlet />
-        </main>
-      </div>
-    </div>
   );
+}
 }
