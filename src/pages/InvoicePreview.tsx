@@ -108,7 +108,12 @@ export default function InvoicePreview() {
             <h2 className="text-3xl font-bold text-primary">Invoice</h2>
             <p className="text-sm text-muted-foreground mt-1">{invoice.invoice_number}</p>
           </div>
-          <img src={logoColor} alt="AI Evoked" className="h-14 w-14 rounded-lg" />
+          <div className="flex items-center gap-3">
+            {getLogos().secondary && (
+              <img src={getLogos().secondary!} alt="Subsidiary" className="h-12 w-12 rounded-lg object-contain" />
+            )}
+            <img src={getLogos().primary} alt="AI Evoked" className="h-14 w-14 rounded-lg object-contain" />
+          </div>
         </div>
 
         {/* Dates */}
