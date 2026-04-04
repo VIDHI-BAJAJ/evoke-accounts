@@ -94,19 +94,19 @@ const seedClients: Client[] = [
 
 const seedInvoiceItems: InvoiceItem[] = [
   {
-    id: "ii1", invoice_id: "inv1", item_name: "Website and CRO Setup", description: "", gst_rate: 18, quantity: 1, rate: 2550, amount: 2550,
+    id: "ii1", invoice_id: "inv1", item_name: "Website and CRO Setup", description: "", hsn_sac: "998314", gst_rate: 18, quantity: 1, rate: 2550, amount: 2550,
     cgst_amount: 229.5, sgst_amount: 229.5, igst_amount: 0, total: 3009,
   },
   {
-    id: "ii2", invoice_id: "inv2", item_name: "Website and CRO", description: "", gst_rate: 18, quantity: 1, rate: 2550, amount: 2550,
+    id: "ii2", invoice_id: "inv2", item_name: "Website and CRO", description: "", hsn_sac: "998314", gst_rate: 18, quantity: 1, rate: 2550, amount: 2550,
     cgst_amount: 229.5, sgst_amount: 229.5, igst_amount: 0, total: 3009,
   },
   {
-    id: "ii3", invoice_id: "inv3", item_name: "Website and CRO Retainer", description: "", gst_rate: 18, quantity: 1, rate: 15330, amount: 15330,
+    id: "ii3", invoice_id: "inv3", item_name: "Website and CRO Retainer", description: "", hsn_sac: "998314", gst_rate: 18, quantity: 1, rate: 15330, amount: 15330,
     cgst_amount: 0, sgst_amount: 0, igst_amount: 2759.4, total: 18089.4,
   },
   {
-    id: "ii4", invoice_id: "inv4", item_name: "Website and CRO Retainer", description: "", gst_rate: 18, quantity: 1, rate: 15000, amount: 15000,
+    id: "ii4", invoice_id: "inv4", item_name: "Website and CRO Retainer", description: "", hsn_sac: "998314", gst_rate: 18, quantity: 1, rate: 15000, amount: 15000,
     cgst_amount: 0, sgst_amount: 0, igst_amount: 2700, total: 17700,
   },
 ];

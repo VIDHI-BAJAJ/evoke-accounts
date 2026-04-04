@@ -21,6 +21,7 @@ export interface InvoiceItem {
   invoice_id: string;
   item_name: string;
   description: string;
+  hsn_sac: string;
   gst_rate: number;
   quantity: number;
   rate: number;

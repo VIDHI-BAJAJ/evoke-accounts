@@ -10,9 +10,10 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { ArrowLeft, Download, Pencil, CreditCard, MessageCircle } from "lucide-react";
-import { useState, useCallback } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 import { Payment } from "@/lib/types";
+import { amountInWords } from "@/lib/invoiceUtils";
 import logoColor from "@/assets/ai-evoked-logo.png";
 
 function getLogos(): { primary: string; secondary: string | null } {
@@ -72,7 +73,7 @@ export default function InvoicePreview() {
 
   function handleWhatsApp() {
     const clientName = client?.company_name || client?.name || "Client";
-    const text = `Hi ${clientName}, please find invoice ${invoice.invoice_number} for ${formatCurrency(invoice.total)} dated ${new Date(invoice.invoice_date).toLocaleDateString("en-IN")}. You can view it here: ${window.location.href}. Bank: Kotak Mahindra, A/C: ${COMPANY.bank.accountNumber}, IFSC: ${COMPANY.bank.ifsc}. Please feel free to reach out at ${COMPANY.email}`;
+    const text = `Hi ${clientName}, please find invoice ${invoice.invoice_number} for ${formatCurrency(invoice.total)} dated ${new Date(invoice.invoice_date).toLocaleDateString("en-IN")}. You can view it here: ${window.location.href}. Bank: ${COMPANY.bank.name}, A/C: ${COMPANY.bank.accountNumber}, IFSC: ${COMPANY.bank.ifsc}. Please feel free to reach out at ${COMPANY.email}`;
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
   }
 
@@ -101,91 +102,108 @@ export default function InvoicePreview() {
       </div>
 
       {/* Printable Invoice */}
-      <div id="invoice-print-area" className="print-area bg-card rounded-xl border shadow-sm p-10 space-y-6" style={{ width: 794, maxWidth: "100%", margin: "0 auto" }}>
-        {/* Header */}
-        <div className="flex justify-between items-start">
-          <div>
-            <h2 className="text-3xl font-bold text-primary">Invoice</h2>
-            <p className="text-sm text-muted-foreground mt-1">{invoice.invoice_number}</p>
-          </div>
-          <div className="flex items-center gap-3">
-            {getLogos().secondary && (
-              <img src={getLogos().secondary!} alt="Subsidiary" className="h-12 w-12 rounded-lg object-contain" />
-            )}
-            <img src={getLogos().primary} alt="AI Evoked" className="h-14 w-14 rounded-lg object-contain" />
+      <div id="invoice-print-area" className="print-area bg-card rounded-xl border shadow-sm p-10 space-y-5" style={{ width: 794, maxWidth: "100%", margin: "0 auto", fontFamily: "'Inter', sans-serif" }}>
+        
+        {/* Header with gradient accent line */}
+        <div className="relative">
+          <div className="absolute top-0 left-0 right-0 h-1 rounded-full" style={{ background: "linear-gradient(90deg, hsl(263 70% 50%), hsl(263 55% 72%))" }} />
+          <div className="flex justify-between items-start pt-4">
+            <div>
+              <h2 className="text-3xl font-extrabold tracking-tight" style={{ color: "hsl(263 70% 50%)" }}>TAX INVOICE</h2>
+              <p className="text-sm text-muted-foreground mt-1 font-medium">{invoice.invoice_number}</p>
+            </div>
+            <div className="flex items-center gap-3">
+              {getLogos().secondary && (
+                <img src={getLogos().secondary!} alt="Subsidiary" className="h-12 w-12 rounded-lg object-contain" />
+              )}
+              <img src={getLogos().primary} alt="AI Evoked" className="h-14 w-14 rounded-lg object-contain" />
+            </div>
           </div>
         </div>
 
-        {/* Dates */}
+        {/* Dates Row */}
         <div className="flex gap-8 text-sm">
           <div>
             <span className="text-muted-foreground">Invoice Date: </span>
-            <span className="font-medium">{new Date(invoice.invoice_date).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}</span>
+            <span className="font-semibold">{new Date(invoice.invoice_date).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}</span>
           </div>
           {invoice.due_date && (
             <div>
               <span className="text-muted-foreground">Due Date: </span>
-              <span className="font-medium">{new Date(invoice.due_date).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}</span>
+              <span className="font-semibold">{new Date(invoice.due_date).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}</span>
             </div>
           )}
         </div>
 
-        {/* Billed By / To */}
+        {/* Billed By / Billed To — Consistent Bold Format */}
         <div className="grid grid-cols-2 gap-4">
-          <div className="rounded-lg bg-primary/5 border border-primary/10 p-4">
-            <p className="text-xs font-semibold text-primary uppercase mb-2">Billed By</p>
-            <p className="font-semibold text-sm">{COMPANY.name}</p>
-            <p className="text-xs text-muted-foreground mt-1">{COMPANY.address}</p>
-            <p className="text-xs text-muted-foreground">GSTIN: {COMPANY.gstin}</p>
-            <p className="text-xs text-muted-foreground">PAN: {COMPANY.pan}</p>
+          {/* Billed By */}
+          <div className="rounded-lg border border-primary/15 p-4" style={{ backgroundColor: "hsl(263 70% 50% / 0.04)" }}>
+            <p className="text-xs font-bold uppercase mb-3 tracking-wider" style={{ color: "hsl(263 70% 50%)" }}>Billed By</p>
+            <div className="space-y-1 text-xs">
+              <p><span className="font-bold text-foreground">Company Name: </span><span className="font-semibold text-sm">{COMPANY.name}</span></p>
+              <p><span className="font-bold text-foreground">Address: </span><span className="text-muted-foreground">{COMPANY.address}</span></p>
+              <p><span className="font-bold text-foreground">GSTIN: </span><span className="text-muted-foreground">{COMPANY.gstin}</span></p>
+              <p><span className="font-bold text-foreground">PAN: </span><span className="text-muted-foreground">{COMPANY.pan}</span></p>
+              <p><span className="font-bold text-foreground">Email: </span><span className="text-muted-foreground">{COMPANY.email}</span></p>
+              <p><span className="font-bold text-foreground">Phone: </span><span className="text-muted-foreground">{COMPANY.phone}</span></p>
+            </div>
           </div>
+
+          {/* Billed To */}
           <div className="rounded-lg bg-muted p-4">
-            <p className="text-xs font-semibold text-foreground uppercase mb-2">Billed To</p>
+            <p className="text-xs font-bold uppercase mb-3 tracking-wider text-foreground">Billed To</p>
             {client && (
-              <>
-                <p className="font-semibold text-sm">
-                  {client.name && client.company_name
-                    ? `${client.name.toUpperCase()} - ${client.company_name.toUpperCase()}`
-                    : (client.company_name || client.name).toUpperCase()}
+              <div className="space-y-1 text-xs">
+                {client.name && (
+                  <p><span className="font-bold text-foreground">Name: </span><span className="text-muted-foreground">{client.name.toUpperCase()}</span></p>
+                )}
+                <p>
+                  <span className="font-bold text-foreground">Company Name: </span>
+                  <span className="font-semibold text-sm">{(client.company_name || client.name).toUpperCase()}</span>
                 </p>
-                {client.address && (
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Address: {[client.address, client.city, client.state_name, client.country, client.pin ? `- ${client.pin}` : ""].filter(Boolean).join(", ")}
+                {(client.address || client.city || client.state_name) && (
+                  <p>
+                    <span className="font-bold text-foreground">Address: </span>
+                    <span className="text-muted-foreground">
+                      {[client.address, client.city, client.state_name, client.country, client.pin ? `- ${client.pin}` : ""].filter(Boolean).join(", ")}
+                    </span>
                   </p>
                 )}
-                {client.gstin && <p className="text-xs text-muted-foreground">GSTIN: {client.gstin}</p>}
-                {client.pan && <p className="text-xs text-muted-foreground">PAN: {client.pan}</p>}
-                {client.email && <p className="text-xs text-muted-foreground">Email: {client.email}</p>}
-                {client.phone && <p className="text-xs text-muted-foreground">Phone: {client.phone}</p>}
-              </>
+                {client.gstin && <p><span className="font-bold text-foreground">GSTIN: </span><span className="text-muted-foreground">{client.gstin}</span></p>}
+                {client.pan && <p><span className="font-bold text-foreground">PAN: </span><span className="text-muted-foreground">{client.pan}</span></p>}
+                {client.email && <p><span className="font-bold text-foreground">Email: </span><span className="text-muted-foreground">{client.email}</span></p>}
+                {client.phone && <p><span className="font-bold text-foreground">Phone: </span><span className="text-muted-foreground">{client.phone}</span></p>}
+              </div>
             )}
           </div>
         </div>
 
         {/* Supply info */}
         <div className="flex gap-8 text-xs text-muted-foreground border-t border-b py-2">
-          <span>Country of Supply: India</span>
-          <span>Place of Supply: {client?.state_name || "Delhi"} ({client?.state_code || "07"})</span>
+          <span><strong className="text-foreground">Country of Supply:</strong> India</span>
+          <span><strong className="text-foreground">Place of Supply:</strong> {client?.state_name || "Delhi"} ({client?.state_code || "07"})</span>
         </div>
 
-        {/* Items Table */}
+        {/* Items Table with SAC/HSN */}
         <Table>
           <TableHeader>
-            <TableRow className="bg-muted/50">
-              <TableHead className="text-xs">#</TableHead>
-              <TableHead className="text-xs">Item</TableHead>
-              <TableHead className="text-xs text-right">Qty</TableHead>
-              <TableHead className="text-xs text-right">Rate</TableHead>
-              <TableHead className="text-xs text-right">Amount</TableHead>
+            <TableRow style={{ backgroundColor: "hsl(263 70% 50% / 0.08)" }}>
+              <TableHead className="text-xs font-bold">#</TableHead>
+              <TableHead className="text-xs font-bold">Item</TableHead>
+              <TableHead className="text-xs font-bold">SAC/HSN</TableHead>
+              <TableHead className="text-xs text-right font-bold">Qty</TableHead>
+              <TableHead className="text-xs text-right font-bold">Rate</TableHead>
+              <TableHead className="text-xs text-right font-bold">Amount</TableHead>
               {isSameState ? (
                 <>
-                  <TableHead className="text-xs text-right">CGST</TableHead>
-                  <TableHead className="text-xs text-right">SGST</TableHead>
+                  <TableHead className="text-xs text-right font-bold">CGST</TableHead>
+                  <TableHead className="text-xs text-right font-bold">SGST</TableHead>
                 </>
               ) : (
-                <TableHead className="text-xs text-right">IGST</TableHead>
+                <TableHead className="text-xs text-right font-bold">IGST</TableHead>
               )}
-              <TableHead className="text-xs text-right">Total</TableHead>
+              <TableHead className="text-xs text-right font-bold">Total</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -196,6 +214,7 @@ export default function InvoicePreview() {
                   <p className="text-sm font-medium">{item.item_name}</p>
                   {item.description && <p className="text-xs text-muted-foreground">{item.description}</p>}
                 </TableCell>
+                <TableCell className="text-xs text-muted-foreground">{item.hsn_sac || "—"}</TableCell>
                 <TableCell className="text-right text-sm">{item.quantity}</TableCell>
                 <TableCell className="text-right text-sm">{formatCurrency(item.rate)}</TableCell>
                 <TableCell className="text-right text-sm">{formatCurrency(item.amount)}</TableCell>
@@ -213,8 +232,12 @@ export default function InvoicePreview() {
           </TableBody>
         </Table>
 
-        {/* Totals */}
-        <div className="flex justify-end">
+        {/* Totals + Amount in Words */}
+        <div className="flex justify-between items-start gap-6">
+          <div className="flex-1 text-xs">
+            <p className="font-bold text-foreground mb-1">Amount in Words:</p>
+            <p className="text-muted-foreground italic">{amountInWords(invoice.total)}</p>
+          </div>
           <div className="w-72 space-y-1 text-sm">
             <div className="flex justify-between"><span className="text-muted-foreground">Subtotal</span><span>{formatCurrency(invoice.subtotal)}</span></div>
             {invoice.cgst > 0 && <div className="flex justify-between"><span className="text-muted-foreground">CGST</span><span>{formatCurrency(invoice.cgst)}</span></div>}
@@ -226,27 +249,49 @@ export default function InvoicePreview() {
           </div>
         </div>
 
-        {/* Bank Details */}
+        {/* Bank Details with UPI */}
         <div className="rounded-lg border p-4">
-          <p className="text-xs font-semibold uppercase mb-2 text-primary">Bank Details</p>
-          <div className="grid grid-cols-2 gap-1 text-xs">
-            <span className="text-muted-foreground">Bank</span><span>{COMPANY.bank.name}</span>
-            <span className="text-muted-foreground">Account Name</span><span>{COMPANY.bank.accountName}</span>
-            <span className="text-muted-foreground">Account Number</span><span>{COMPANY.bank.accountNumber}</span>
-            <span className="text-muted-foreground">IFSC</span><span>{COMPANY.bank.ifsc}</span>
-            <span className="text-muted-foreground">Account Type</span><span>{COMPANY.bank.accountType}</span>
+          <p className="text-xs font-bold uppercase mb-2 tracking-wider" style={{ color: "hsl(263 70% 50%)" }}>Bank Details</p>
+          <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+            <span className="font-bold text-foreground">Bank</span><span className="text-muted-foreground">{COMPANY.bank.name}</span>
+            <span className="font-bold text-foreground">Account Name</span><span className="text-muted-foreground">{COMPANY.bank.accountName}</span>
+            <span className="font-bold text-foreground">Account Number</span><span className="text-muted-foreground">{COMPANY.bank.accountNumber}</span>
+            <span className="font-bold text-foreground">IFSC</span><span className="text-muted-foreground">{COMPANY.bank.ifsc}</span>
+            <span className="font-bold text-foreground">Account Type</span><span className="text-muted-foreground">{COMPANY.bank.accountType}</span>
             {COMPANY.bank.upiId && (
               <>
-                <span className="text-muted-foreground">UPI ID</span><span>{COMPANY.bank.upiId}</span>
+                <span className="font-bold text-foreground">UPI ID</span><span className="text-muted-foreground">{COMPANY.bank.upiId}</span>
               </>
             )}
           </div>
         </div>
 
+        {/* Terms & Conditions */}
+        <div className="text-xs text-muted-foreground space-y-1">
+          <p className="font-bold text-foreground text-xs uppercase tracking-wider mb-1">Terms & Conditions</p>
+          <p>1. Payment is due within 15 days of invoice date unless otherwise specified.</p>
+          <p>2. Late payments may attract interest at 1.5% per month.</p>
+          <p>3. All disputes are subject to Delhi jurisdiction.</p>
+          {invoice.notes && <p className="mt-2 italic">Note: {invoice.notes}</p>}
+        </div>
+
+        {/* Signature Block */}
+        <div className="flex justify-between items-end pt-4 border-t">
+          <div className="text-xs text-muted-foreground">
+            <p>Receiver's Signature</p>
+            <div className="mt-8 w-40 border-t border-foreground/30" />
+          </div>
+          <div className="text-xs text-right">
+            <p className="font-bold text-foreground">For {COMPANY.shortName}</p>
+            <div className="mt-8 w-40 border-t border-foreground/30 ml-auto" />
+            <p className="text-muted-foreground mt-1">Authorised Signatory</p>
+          </div>
+        </div>
+
         {/* Footer */}
-        <div className="text-center text-xs text-muted-foreground space-y-1 pt-4 border-t">
-          <p>For any enquiry, reach out via email at {COMPANY.email}, call on {COMPANY.phone}</p>
-          <p className="italic">This is an electronically generated document, no signature is required.</p>
+        <div className="text-center text-xs text-muted-foreground space-y-1 pt-3 border-t">
+          <p>For any enquiry, reach out via email at <strong>{COMPANY.email}</strong> or call on <strong>{COMPANY.phone}</strong></p>
+          <p className="italic">This is a computer-generated invoice and does not require a physical signature.</p>
         </div>
       </div>
 
@@ -313,7 +358,7 @@ function RecordPaymentDialog({ invoiceId, balance, onSaved }: { invoiceId: strin
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button size="sm" className="bg-gradient-to-r from-primary to-violet-700 hover:from-violet-700 hover:to-primary text-primary-foreground">
+        <Button size="sm" className="bg-gradient-to-r from-primary to-accent hover:from-accent hover:to-primary text-primary-foreground">
           <CreditCard className="mr-1 h-3 w-3" /> Record Payment
         </Button>
       </DialogTrigger>
@@ -343,7 +388,7 @@ function RecordPaymentDialog({ invoiceId, balance, onSaved }: { invoiceId: strin
             <Label>Reference / UTR</Label>
             <Input value={reference} onChange={(e) => setReference(e.target.value)} placeholder="Optional" />
           </div>
-          <Button onClick={handleSave} className="w-full bg-gradient-to-r from-primary to-violet-700 hover:from-violet-700 hover:to-primary text-primary-foreground">
+          <Button onClick={handleSave} className="w-full bg-gradient-to-r from-primary to-accent hover:from-accent hover:to-primary text-primary-foreground">
             Record Payment
           </Button>
         </div>

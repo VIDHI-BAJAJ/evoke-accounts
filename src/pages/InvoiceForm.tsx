@@ -19,6 +19,7 @@ function newItem(invoiceId: string): InvoiceItem {
     invoice_id: invoiceId,
     item_name: "",
     description: "",
+    hsn_sac: "",
     gst_rate: 18,
     quantity: 1,
     rate: 0,
@@ -217,6 +218,14 @@ export default function InvoiceForm() {
                 />
               </div>
               <div className="sm:col-span-1">
+                <Label className="text-xs">SAC/HSN</Label>
+                <Input
+                  value={item.hsn_sac}
+                  onChange={(e) => updateItem(idx, "hsn_sac", e.target.value)}
+                  placeholder="998314"
+                />
+              </div>
+              <div className="sm:col-span-1">
                 <Label className="text-xs">GST %</Label>
                 <Select value={String(item.gst_rate)} onValueChange={(v) => updateItem(idx, "gst_rate", Number(v))}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
@@ -233,7 +242,7 @@ export default function InvoiceForm() {
                 <Label className="text-xs">Rate (₹)</Label>
                 <Input type="number" min={0} value={item.rate} onChange={(e) => updateItem(idx, "rate", Number(e.target.value))} />
               </div>
-              <div className="sm:col-span-2">
+              <div className="sm:col-span-1">
                 <Label className="text-xs">Total</Label>
                 <div className="h-10 flex items-center font-semibold text-sm">
                   {formatCurrency(recalcItem(item).total)}
