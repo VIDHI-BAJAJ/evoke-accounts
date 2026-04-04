@@ -15,6 +15,15 @@ import { toast } from "sonner";
 import { Payment } from "@/lib/types";
 import logoColor from "@/assets/ai-evoked-logo.png";
 
+function getLogos(): { primary: string; secondary: string | null } {
+  const customPrimary = localStorage.getItem("aievoked_primary_logo");
+  const customSecondary = localStorage.getItem("aievoked_secondary_logo");
+  return {
+    primary: customPrimary || logoColor,
+    secondary: customSecondary || null,
+  };
+}
+
 export default function InvoicePreview() {
   const { id } = useParams();
   const navigate = useNavigate();
