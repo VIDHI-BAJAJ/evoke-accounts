@@ -15,6 +15,15 @@ import { toast } from "sonner";
 import { Payment } from "@/lib/types";
 import logoColor from "@/assets/ai-evoked-logo.png";
 
+function getLogos(): { primary: string; secondary: string | null } {
+  const customPrimary = localStorage.getItem("aievoked_primary_logo");
+  const customSecondary = localStorage.getItem("aievoked_secondary_logo");
+  return {
+    primary: customPrimary || logoColor,
+    secondary: customSecondary || null,
+  };
+}
+
 export default function InvoicePreview() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -99,7 +108,12 @@ export default function InvoicePreview() {
             <h2 className="text-3xl font-bold text-primary">Invoice</h2>
             <p className="text-sm text-muted-foreground mt-1">{invoice.invoice_number}</p>
           </div>
-          <img src={logoColor} alt="AI Evoked" className="h-14 w-14 rounded-lg" />
+          <div className="flex items-center gap-3">
+            {getLogos().secondary && (
+              <img src={getLogos().secondary!} alt="Subsidiary" className="h-12 w-12 rounded-lg object-contain" />
+            )}
+            <img src={getLogos().primary} alt="AI Evoked" className="h-14 w-14 rounded-lg object-contain" />
+          </div>
         </div>
 
         {/* Dates */}
@@ -129,13 +143,20 @@ export default function InvoicePreview() {
             <p className="text-xs font-semibold text-foreground uppercase mb-2">Billed To</p>
             {client && (
               <>
-                <p className="font-semibold text-sm">{client.company_name || client.name}</p>
-                {client.name && client.company_name && <p className="text-xs text-muted-foreground">{client.name}</p>}
-                <p className="text-xs text-muted-foreground mt-1">
-                  {[client.address, client.city, client.state_name, client.pin].filter(Boolean).join(", ")}
+                <p className="font-semibold text-sm">
+                  {client.name && client.company_name
+                    ? `${client.name.toUpperCase()} - ${client.company_name.toUpperCase()}`
+                    : (client.company_name || client.name).toUpperCase()}
                 </p>
+                {client.address && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Address: {[client.address, client.city, client.state_name, client.country, client.pin ? `- ${client.pin}` : ""].filter(Boolean).join(", ")}
+                  </p>
+                )}
                 {client.gstin && <p className="text-xs text-muted-foreground">GSTIN: {client.gstin}</p>}
-                {client.email && <p className="text-xs text-muted-foreground">{client.email}</p>}
+                {client.pan && <p className="text-xs text-muted-foreground">PAN: {client.pan}</p>}
+                {client.email && <p className="text-xs text-muted-foreground">Email: {client.email}</p>}
+                {client.phone && <p className="text-xs text-muted-foreground">Phone: {client.phone}</p>}
               </>
             )}
           </div>
@@ -214,6 +235,11 @@ export default function InvoicePreview() {
             <span className="text-muted-foreground">Account Number</span><span>{COMPANY.bank.accountNumber}</span>
             <span className="text-muted-foreground">IFSC</span><span>{COMPANY.bank.ifsc}</span>
             <span className="text-muted-foreground">Account Type</span><span>{COMPANY.bank.accountType}</span>
+            {COMPANY.bank.upiId && (
+              <>
+                <span className="text-muted-foreground">UPI ID</span><span>{COMPANY.bank.upiId}</span>
+              </>
+            )}
           </div>
         </div>
 

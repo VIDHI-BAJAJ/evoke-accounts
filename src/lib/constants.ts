@@ -14,6 +14,7 @@ export const COMPANY = {
     accountNumber: "8750530938",
     ifsc: "KKBK0000203",
     accountType: "Current",
+    upiId: "aievoked@kotak",
   },
 };
 
