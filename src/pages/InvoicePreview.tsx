@@ -221,6 +221,11 @@ export default function InvoicePreview() {
             <span className="text-muted-foreground">Account Number</span><span>{COMPANY.bank.accountNumber}</span>
             <span className="text-muted-foreground">IFSC</span><span>{COMPANY.bank.ifsc}</span>
             <span className="text-muted-foreground">Account Type</span><span>{COMPANY.bank.accountType}</span>
+            {COMPANY.bank.upiId && (
+              <>
+                <span className="text-muted-foreground">UPI ID</span><span>{COMPANY.bank.upiId}</span>
+              </>
+            )}
           </div>
         </div>
 
