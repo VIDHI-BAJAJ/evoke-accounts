@@ -19,6 +19,7 @@ function newItem(invoiceId: string): InvoiceItem {
     invoice_id: invoiceId,
     item_name: "",
     description: "",
+    hsn_sac: "",
     gst_rate: 18,
     quantity: 1,
     rate: 0,
