@@ -129,13 +129,20 @@ export default function InvoicePreview() {
             <p className="text-xs font-semibold text-foreground uppercase mb-2">Billed To</p>
             {client && (
               <>
-                <p className="font-semibold text-sm">{client.company_name || client.name}</p>
-                {client.name && client.company_name && <p className="text-xs text-muted-foreground">{client.name}</p>}
-                <p className="text-xs text-muted-foreground mt-1">
-                  {[client.address, client.city, client.state_name, client.pin].filter(Boolean).join(", ")}
+                <p className="font-semibold text-sm">
+                  {client.name && client.company_name
+                    ? `${client.name.toUpperCase()} - ${client.company_name.toUpperCase()}`
+                    : (client.company_name || client.name).toUpperCase()}
                 </p>
+                {client.address && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Address: {[client.address, client.city, client.state_name, client.country, client.pin ? `- ${client.pin}` : ""].filter(Boolean).join(", ")}
+                  </p>
+                )}
                 {client.gstin && <p className="text-xs text-muted-foreground">GSTIN: {client.gstin}</p>}
-                {client.email && <p className="text-xs text-muted-foreground">{client.email}</p>}
+                {client.pan && <p className="text-xs text-muted-foreground">PAN: {client.pan}</p>}
+                {client.email && <p className="text-xs text-muted-foreground">Email: {client.email}</p>}
+                {client.phone && <p className="text-xs text-muted-foreground">Phone: {client.phone}</p>}
               </>
             )}
           </div>
