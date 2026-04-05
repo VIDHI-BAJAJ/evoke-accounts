@@ -45,6 +45,7 @@ export interface Invoice {
   igst: number;
   total: number;
   notes: string;
+  terms_and_conditions: string;
   created_at: string;
   updated_at: string;
   items?: InvoiceItem[];
