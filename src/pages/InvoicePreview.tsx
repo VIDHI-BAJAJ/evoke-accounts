@@ -258,11 +258,14 @@ export default function InvoicePreview() {
             <span className="font-bold text-foreground">Account Number</span><span className="text-muted-foreground">{COMPANY.bank.accountNumber}</span>
             <span className="font-bold text-foreground">IFSC</span><span className="text-muted-foreground">{COMPANY.bank.ifsc}</span>
             <span className="font-bold text-foreground">Account Type</span><span className="text-muted-foreground">{COMPANY.bank.accountType}</span>
-            {COMPANY.bank.upiId && (
-              <>
-                <span className="font-bold text-foreground">UPI ID</span><span className="text-muted-foreground">{COMPANY.bank.upiId}</span>
-              </>
-            )}
+            {(() => {
+              const upi = localStorage.getItem("aievoked_upi_id") || COMPANY.bank.upiId;
+              return upi ? (
+                <>
+                  <span className="font-bold text-foreground">UPI ID</span><span className="text-muted-foreground">{upi}</span>
+                </>
+              ) : null;
+            })()}
           </div>
         </div>
 
