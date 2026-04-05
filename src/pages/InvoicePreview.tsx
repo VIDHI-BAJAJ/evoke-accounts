@@ -151,8 +151,8 @@ export default function InvoicePreview() {
           </div>
 
           {/* Billed To */}
-          <div className="rounded-lg bg-muted p-4">
-            <p className="text-xs font-bold uppercase mb-3 tracking-wider text-foreground">Billed To</p>
+          <div className="rounded-lg border border-primary/15 p-4" style={{ backgroundColor: "hsl(263 70% 50% / 0.04)" }}>
+            <p className="text-xs font-bold uppercase mb-3 tracking-wider" style={{ color: "hsl(263 70% 50%)" }}>Billed To</p>
             {client && (
               <div className="space-y-1 text-xs">
                 {client.name && (
@@ -272,9 +272,9 @@ export default function InvoicePreview() {
         {/* Terms & Conditions */}
         <div className="text-xs text-muted-foreground space-y-1">
           <p className="font-bold text-foreground text-xs uppercase tracking-wider mb-1">Terms & Conditions</p>
-          <p>1. Payment is due within 15 days of invoice date unless otherwise specified.</p>
-          <p>2. Late payments may attract interest at 1.5% per month.</p>
-          <p>3. All disputes are subject to Delhi jurisdiction.</p>
+          {(invoice.terms_and_conditions || "").split("\n").filter(Boolean).map((line, i) => (
+            <p key={i}>{line}</p>
+          ))}
           {invoice.notes && <p className="mt-2 italic">Note: {invoice.notes}</p>}
         </div>
 

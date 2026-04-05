@@ -48,6 +48,8 @@ export default function InvoiceForm() {
   const [dueDate, setDueDate] = useState(existingInvoice?.due_date || "");
   const [clientId, setClientId] = useState(existingInvoice?.client_id || "");
   const [notes, setNotes] = useState(existingInvoice?.notes || "");
+  const defaultTerms = "1. Payment is due within 15 days of the invoice date unless otherwise specified.\n2. Late payments may attract interest at 1.5% per month.\n3. All disputes are subject to Delhi jurisdiction.";
+  const [termsAndConditions, setTermsAndConditions] = useState(existingInvoice?.terms_and_conditions || defaultTerms);
   const [items, setItems] = useState<InvoiceItem[]>(
     existingInvoice?.items?.length ? existingInvoice.items : [newItem(invoiceId)]
   );
@@ -122,6 +124,7 @@ export default function InvoiceForm() {
       igst: totals.igst,
       total: totals.total,
       notes,
+      terms_and_conditions: termsAndConditions,
       created_at: existingInvoice?.created_at || new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
@@ -292,7 +295,20 @@ export default function InvoiceForm() {
         </CardContent>
       </Card>
 
-      {/* Section 5: Notes */}
+      {/* Section 5: Terms & Conditions */}
+      <Card className="shadow-sm">
+        <CardHeader><CardTitle className="text-base">Terms & Conditions</CardTitle></CardHeader>
+        <CardContent>
+          <Textarea
+            value={termsAndConditions}
+            onChange={(e) => setTermsAndConditions(e.target.value)}
+            placeholder="Enter terms and conditions for this invoice..."
+            className="min-h-[100px]"
+          />
+        </CardContent>
+      </Card>
+
+      {/* Section 6: Notes */}
       <Card className="shadow-sm">
         <CardHeader><CardTitle className="text-base">Notes</CardTitle></CardHeader>
         <CardContent>

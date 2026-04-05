@@ -111,22 +111,24 @@ const seedInvoiceItems: InvoiceItem[] = [
   },
 ];
 
+const DEFAULT_TERMS = "1. Payment is due within 15 days of the invoice date unless otherwise specified.\n2. Late payments may attract interest at 1.5% per month.\n3. All disputes are subject to Delhi jurisdiction.";
+
 const seedInvoices: Invoice[] = [
   {
     id: "inv1", invoice_number: "AI/2025-26/01", invoice_date: "2026-02-15", due_date: "", client_id: "c1",
-    status: "unpaid", subtotal: 2550, cgst: 229.5, sgst: 229.5, igst: 0, total: 3009, notes: "", created_at: "2026-02-15T00:00:00Z", updated_at: "2026-02-15T00:00:00Z",
+    status: "unpaid", subtotal: 2550, cgst: 229.5, sgst: 229.5, igst: 0, total: 3009, notes: "", terms_and_conditions: DEFAULT_TERMS, created_at: "2026-02-15T00:00:00Z", updated_at: "2026-02-15T00:00:00Z",
   },
   {
     id: "inv2", invoice_number: "AI/2025-26/02", invoice_date: "2026-02-15", due_date: "", client_id: "c2",
-    status: "unpaid", subtotal: 2550, cgst: 229.5, sgst: 229.5, igst: 0, total: 3009, notes: "", created_at: "2026-02-15T00:00:00Z", updated_at: "2026-02-15T00:00:00Z",
+    status: "unpaid", subtotal: 2550, cgst: 229.5, sgst: 229.5, igst: 0, total: 3009, notes: "", terms_and_conditions: DEFAULT_TERMS, created_at: "2026-02-15T00:00:00Z", updated_at: "2026-02-15T00:00:00Z",
   },
   {
     id: "inv3", invoice_number: "AI/2025-26/03", invoice_date: "2026-03-04", due_date: "", client_id: "c3",
-    status: "unpaid", subtotal: 15330, cgst: 0, sgst: 0, igst: 2759.4, total: 18089.4, notes: "", created_at: "2026-03-04T00:00:00Z", updated_at: "2026-03-04T00:00:00Z",
+    status: "unpaid", subtotal: 15330, cgst: 0, sgst: 0, igst: 2759.4, total: 18089.4, notes: "", terms_and_conditions: DEFAULT_TERMS, created_at: "2026-03-04T00:00:00Z", updated_at: "2026-03-04T00:00:00Z",
   },
   {
     id: "inv4", invoice_number: "AI/2025-26/04", invoice_date: "2026-03-09", due_date: "2026-03-24", client_id: "c4",
-    status: "unpaid", subtotal: 15000, cgst: 0, sgst: 0, igst: 2700, total: 17700, notes: "", created_at: "2026-03-09T00:00:00Z", updated_at: "2026-03-09T00:00:00Z",
+    status: "unpaid", subtotal: 15000, cgst: 0, sgst: 0, igst: 2700, total: 17700, notes: "", terms_and_conditions: DEFAULT_TERMS, created_at: "2026-03-09T00:00:00Z", updated_at: "2026-03-09T00:00:00Z",
   },
 ];
 
