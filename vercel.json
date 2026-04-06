@@ -1,6 +1,8 @@
 {
   "rewrites": [
-    { "source": "/invoice/(.*)", "destination": "/invoice/index.html" },
-    { "source": "/invoice", "destination": "/invoice/index.html" }
+    {
+      "source": "/invoice/:path*",
+      "destination": "https://evoke-accounts.vercel.app/invoice/:path*"
+    }
   ]
 }
