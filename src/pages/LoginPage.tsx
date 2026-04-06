@@ -7,8 +7,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import logoWhite from "@/assets/ai-evoked-logo-white.png";
 
-const DEMO_EMAIL = "admin@aievoked.com";
-const DEMO_PASSWORD = "admin123";
+
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -16,21 +15,29 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-
-    setTimeout(() => {
-      if (email === DEMO_EMAIL && password === DEMO_PASSWORD) {
-        localStorage.setItem("auth_user", JSON.stringify({ email, name: "Admin" }));
-        toast.success("Logged in successfully");
-        navigate("/");
-      } else {
-        toast.error("Invalid credentials. Use admin@aievoked.com / admin123");
-      }
-      setLoading(false);
-    }, 500);
-  };
+const handleLogin = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setLoading(true);
+  try {
+    const res = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      toast.error(data.error || "Invalid credentials");
+      return;
+    }
+    localStorage.setItem("auth_user", JSON.stringify({ email: data.email, name: data.name }));
+    toast.success("Logged in successfully");
+    navigate("/");
+  } catch {
+    toast.error("Something went wrong. Try again.");
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background">
@@ -40,7 +47,7 @@ export default function LoginPage() {
             <img src={logoWhite} alt="AI Evoked" className="h-8 w-8 object-contain" />
           </div>
           <CardTitle className="text-xl">Sign in to AI Evoked</CardTitle>
-          <p className="text-sm text-muted-foreground">Demo: admin@aievoked.com / admin123</p>
+          {/* <p className="text-sm text-muted-foreground">Demo: admin@aievoked.com / admin123</p> */}
         </CardHeader>
         <CardContent>
           <form onSubmit={handleLogin} className="space-y-4">
