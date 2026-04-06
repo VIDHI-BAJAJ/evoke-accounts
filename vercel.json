@@ -1,0 +1,6 @@
+{
+  "rewrites": [
+    { "source": "/invoice/(.*)", "destination": "/invoice/index.html" },
+    { "source": "/invoice", "destination": "/invoice/index.html" }
+  ]
+}
