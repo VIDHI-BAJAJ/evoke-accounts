@@ -1,5 +1,5 @@
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { getInvoice, getPayments, savePayment, getTotalPaid } from "@/lib/store";
+import { getInvoice, getClients, getPayments, savePayment } from "@/lib/store";
 import { COMPANY, formatCurrency, PAYMENT_MODES } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import { Payment } from "@/lib/types";
 import { amountInWords } from "@/lib/invoiceUtils";
 import logoColor from "@/assets/ai-evoked-logo.png";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 function getLogos(): { primary: string; secondary: string | null } {
   const customPrimary = localStorage.getItem("aievoked_primary_logo");
@@ -28,37 +29,44 @@ function getLogos(): { primary: string; secondary: string | null } {
 export default function InvoicePreview() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [, setRefresh] = useState(0);
+  const queryClient = useQueryClient();
 
-  const invoice = id ? getInvoice(id) : undefined;
+  const { data: invoice, isLoading: invoiceLoading } = useQuery({
+    queryKey: ["invoice", id],
+    queryFn: () => getInvoice(id!),
+    enabled: !!id,
+  });
+
+  const { data: clients = [] } = useQuery({ queryKey: ["clients"], queryFn: getClients });
+
+  const { data: payments = [] } = useQuery({
+    queryKey: ["payments", id],
+    queryFn: () => getPayments(id!),
+    enabled: !!id,
+  });
+
+  if (invoiceLoading) {
+    return <div className="text-center py-20 text-muted-foreground">Loading invoice...</div>;
+  }
+
   if (!invoice) {
     return <div className="text-center py-20 text-muted-foreground">Invoice not found</div>;
   }
 
-  const client = invoice.client;
+  const client = clients.find((c) => c.id === invoice.client_id);
   const items = invoice.items || [];
-  const payments = getPayments(invoice.id);
-  const totalPaid = getTotalPaid(invoice.id);
+  const totalPaid = payments.reduce((s, p) => s + p.amount, 0);
   const balance = invoice.total - totalPaid;
   const isSameState = client?.state_code === COMPANY.stateCode;
 
   async function handleDownloadPDF() {
     const element = document.getElementById("invoice-print-area");
     if (!element) return;
-    
     toast.info("Generating PDF...");
-    
     try {
       const html2canvas = (await import("html2canvas")).default;
       const jsPDF = (await import("jspdf")).default;
-      
-      const canvas = await html2canvas(element, {
-        scale: 2,
-        useCORS: true,
-        backgroundColor: "#ffffff",
-        width: 794,
-      });
-      
+      const canvas = await html2canvas(element, { scale: 2, useCORS: true, backgroundColor: "#ffffff", width: 794 });
       const imgData = canvas.toDataURL("image/png");
       const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
       const pdfWidth = pdf.internal.pageSize.getWidth();
@@ -88,7 +96,15 @@ export default function InvoicePreview() {
           <StatusBadge status={invoice.status} />
         </div>
         <div className="flex gap-2 flex-wrap">
-          <RecordPaymentDialog invoiceId={invoice.id} balance={balance} onSaved={() => setRefresh((r) => r + 1)} />
+          <RecordPaymentDialog
+            invoiceId={invoice.id}
+            balance={balance}
+            onSaved={() => {
+              queryClient.invalidateQueries({ queryKey: ["payments", id] });
+              queryClient.invalidateQueries({ queryKey: ["invoices"] });
+              queryClient.invalidateQueries({ queryKey: ["invoice", id] });
+            }}
+          />
           <Button variant="outline" size="sm" asChild>
             <Link to={`/invoices/${invoice.id}/edit`}><Pencil className="mr-1 h-3 w-3" /> Edit</Link>
           </Button>
@@ -103,8 +119,7 @@ export default function InvoicePreview() {
 
       {/* Printable Invoice */}
       <div id="invoice-print-area" className="print-area bg-card rounded-xl border shadow-sm p-10 space-y-5" style={{ width: 794, maxWidth: "100%", margin: "0 auto", fontFamily: "'Inter', sans-serif" }}>
-        
-        {/* Header with gradient accent line */}
+
         <div className="relative">
           <div className="absolute top-0 left-0 right-0 h-1 rounded-full" style={{ background: "linear-gradient(90deg, hsl(263 70% 50%), hsl(263 55% 72%))" }} />
           <div className="flex justify-between items-start pt-4">
@@ -121,7 +136,6 @@ export default function InvoicePreview() {
           </div>
         </div>
 
-        {/* Dates Row */}
         <div className="flex gap-8 text-sm">
           <div>
             <span className="text-muted-foreground">Invoice Date: </span>
@@ -135,9 +149,7 @@ export default function InvoicePreview() {
           )}
         </div>
 
-        {/* Billed By / Billed To — Consistent Bold Format */}
         <div className="grid grid-cols-2 gap-4">
-          {/* Billed By */}
           <div className="rounded-lg border border-primary/15 p-4" style={{ backgroundColor: "hsl(263 70% 50% / 0.04)" }}>
             <p className="text-xs font-bold uppercase mb-3 tracking-wider" style={{ color: "hsl(263 70% 50%)" }}>Billed By</p>
             <div className="space-y-1 text-xs">
@@ -150,25 +162,14 @@ export default function InvoicePreview() {
             </div>
           </div>
 
-          {/* Billed To */}
           <div className="rounded-lg border border-primary/15 p-4" style={{ backgroundColor: "hsl(263 70% 50% / 0.04)" }}>
             <p className="text-xs font-bold uppercase mb-3 tracking-wider" style={{ color: "hsl(263 70% 50%)" }}>Billed To</p>
             {client && (
               <div className="space-y-1 text-xs">
-                {client.name && (
-                  <p><span className="font-bold text-foreground">Name: </span><span className="text-muted-foreground">{client.name.toUpperCase()}</span></p>
-                )}
-                <p>
-                  <span className="font-bold text-foreground">Company Name: </span>
-                  <span className="font-semibold text-sm">{(client.company_name || client.name).toUpperCase()}</span>
-                </p>
+                {client.name && <p><span className="font-bold text-foreground">Name: </span><span className="text-muted-foreground">{client.name.toUpperCase()}</span></p>}
+                <p><span className="font-bold text-foreground">Company Name: </span><span className="font-semibold text-sm">{(client.company_name || client.name).toUpperCase()}</span></p>
                 {(client.address || client.city || client.state_name) && (
-                  <p>
-                    <span className="font-bold text-foreground">Address: </span>
-                    <span className="text-muted-foreground">
-                      {[client.address, client.city, client.state_name, client.country, client.pin ? `- ${client.pin}` : ""].filter(Boolean).join(", ")}
-                    </span>
-                  </p>
+                  <p><span className="font-bold text-foreground">Address: </span><span className="text-muted-foreground">{[client.address, client.city, client.state_name, client.country, client.pin ? `- ${client.pin}` : ""].filter(Boolean).join(", ")}</span></p>
                 )}
                 {client.gstin && <p><span className="font-bold text-foreground">GSTIN: </span><span className="text-muted-foreground">{client.gstin}</span></p>}
                 {client.pan && <p><span className="font-bold text-foreground">PAN: </span><span className="text-muted-foreground">{client.pan}</span></p>}
@@ -179,13 +180,11 @@ export default function InvoicePreview() {
           </div>
         </div>
 
-        {/* Supply info */}
         <div className="flex gap-8 text-xs text-muted-foreground border-t border-b py-2">
           <span><strong className="text-foreground">Country of Supply:</strong> India</span>
           <span><strong className="text-foreground">Place of Supply:</strong> {client?.state_name || "Delhi"} ({client?.state_code || "07"})</span>
         </div>
 
-        {/* Items Table with SAC/HSN */}
         <Table>
           <TableHeader>
             <TableRow style={{ backgroundColor: "hsl(263 70% 50% / 0.08)" }}>
@@ -232,7 +231,6 @@ export default function InvoicePreview() {
           </TableBody>
         </Table>
 
-        {/* Totals + Amount in Words */}
         <div className="flex justify-between items-start gap-6">
           <div className="flex-1 text-xs">
             <p className="font-bold text-foreground mb-1">Amount in Words:</p>
@@ -249,7 +247,6 @@ export default function InvoicePreview() {
           </div>
         </div>
 
-        {/* Bank Details with UPI */}
         <div className="rounded-lg border p-4">
           <p className="text-xs font-bold uppercase mb-2 tracking-wider" style={{ color: "hsl(263 70% 50%)" }}>Bank Details</p>
           <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
@@ -269,7 +266,6 @@ export default function InvoicePreview() {
           </div>
         </div>
 
-        {/* Terms & Conditions */}
         <div className="text-xs text-muted-foreground space-y-1">
           <p className="font-bold text-foreground text-xs uppercase tracking-wider mb-1">Terms & Conditions</p>
           {(invoice.terms_and_conditions || "").split("\n").filter(Boolean).map((line, i) => (
@@ -278,7 +274,6 @@ export default function InvoicePreview() {
           {invoice.notes && <p className="mt-2 italic">Note: {invoice.notes}</p>}
         </div>
 
-        {/* Signature Block */}
         <div className="flex justify-between items-end pt-4 border-t">
           <div className="text-xs text-muted-foreground">
             <p>Receiver's Signature</p>
@@ -291,7 +286,6 @@ export default function InvoicePreview() {
           </div>
         </div>
 
-        {/* Footer */}
         <div className="text-center text-xs text-muted-foreground space-y-1 pt-3 border-t">
           <p>For any enquiry, reach out via email at <strong>{COMPANY.email}</strong> or call on <strong>{COMPANY.phone}</strong></p>
           <p className="italic">This is a computer-generated invoice and does not require a physical signature.</p>
@@ -337,7 +331,7 @@ function RecordPaymentDialog({ invoiceId, balance, onSaved }: { invoiceId: strin
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
   const [reference, setReference] = useState("");
 
-  function handleSave() {
+  async function handleSave() {
     if (Number(amount) <= 0) {
       toast.error("Please enter a valid amount");
       return;
@@ -352,7 +346,7 @@ function RecordPaymentDialog({ invoiceId, balance, onSaved }: { invoiceId: strin
       notes: "",
       created_at: new Date().toISOString(),
     };
-    savePayment(payment);
+    await savePayment(payment);
     toast.success("Payment recorded successfully");
     setOpen(false);
     onSaved();
