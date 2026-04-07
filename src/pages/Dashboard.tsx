@@ -6,11 +6,12 @@ import { getInvoices, getClients } from "@/lib/store";
 import { formatCurrency } from "@/lib/constants";
 import { Plus, Users, FileText, IndianRupee, AlertCircle, TrendingUp } from "lucide-react";
 import { useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 
 export default function Dashboard() {
-  const invoices = getInvoices();
-  const clients = getClients();
+  const { data: invoices = [] } = useQuery({ queryKey: ["invoices"], queryFn: getInvoices });
+  const { data: clients = [] } = useQuery({ queryKey: ["clients"], queryFn: getClients });
 
   const stats = useMemo(() => {
     const now = new Date();
@@ -49,7 +50,7 @@ export default function Dashboard() {
     });
   }, [invoices]);
 
-  const recentInvoices = invoices
+  const recentInvoices = [...invoices]
     .sort((a, b) => new Date(b.invoice_date).getTime() - new Date(a.invoice_date).getTime())
     .slice(0, 5);
 
@@ -61,6 +62,7 @@ export default function Dashboard() {
   ];
 
   return (
+    <>
     <div className="space-y-6">
       {/* Quick Actions */}
       <div className="flex items-center justify-between">
@@ -169,5 +171,6 @@ export default function Dashboard() {
         </Card>
       </div>
     </div>
+    </>
   );
 }
