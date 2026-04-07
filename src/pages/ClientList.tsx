@@ -11,13 +11,15 @@ import { INDIAN_STATES } from "@/lib/constants";
 import { Client } from "@/lib/types";
 import { Plus, Search, Eye, Archive, Pencil, Users, Mail, Phone, MapPin } from "lucide-react";
 import { toast } from "sonner";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 export default function ClientList() {
   const [search, setSearch] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "table">("grid");
-  const [, setRefresh] = useState(0);
+  const queryClient = useQueryClient();
 
-  const clients = getClients().filter((c) => !c.is_archived);
+  const { data: allClients = [] } = useQuery({ queryKey: ["clients"], queryFn: getClients });
+  const clients = allClients.filter((c) => !c.is_archived);
 
   const filtered = clients.filter(
     (c) =>
@@ -26,9 +28,9 @@ export default function ClientList() {
       c.email.toLowerCase().includes(search.toLowerCase())
   );
 
-  const handleArchive = (id: string) => {
-    archiveClient(id);
-    setRefresh((r) => r + 1);
+  const handleArchive = async (id: string) => {
+    await archiveClient(id);
+    queryClient.invalidateQueries({ queryKey: ["clients"] });
     toast.success("Client archived");
   };
 
@@ -43,7 +45,7 @@ export default function ClientList() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-semibold text-foreground">Clients</h2>
-        <ClientFormDialog onSaved={() => setRefresh((r) => r + 1)} />
+        <ClientFormDialog onSaved={() => queryClient.invalidateQueries({ queryKey: ["clients"] })} />
       </div>
 
       <div className="flex gap-3 flex-wrap items-center">
@@ -64,41 +66,16 @@ export default function ClientList() {
         </div>
       ) : viewMode === "grid" ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {filtered.map((c, i) => {
-            const invoiceCount = getInvoicesForClient(c.id).length;
-            return (
-              <Card key={c.id} className="shadow-sm hover:shadow-md transition-shadow group">
-                <CardContent className="pt-6">
-                  <div className="flex items-start gap-3">
-                    <div className={`h-10 w-10 rounded-full ${colors[i % colors.length]} flex items-center justify-center text-white text-sm font-bold shrink-0`}>
-                      {getInitials(c)}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-sm truncate">{c.company_name || c.name}</p>
-                      {c.name && c.company_name && <p className="text-xs text-muted-foreground truncate">{c.name}</p>}
-                    </div>
-                  </div>
-                  <div className="mt-3 space-y-1 text-xs text-muted-foreground">
-                    {c.email && <p className="flex items-center gap-1.5 truncate"><Mail className="h-3 w-3 shrink-0" />{c.email}</p>}
-                    {c.phone && <p className="flex items-center gap-1.5"><Phone className="h-3 w-3 shrink-0" />{c.phone}</p>}
-                    <p className="flex items-center gap-1.5"><MapPin className="h-3 w-3 shrink-0" />{c.state_name} ({c.state_code})</p>
-                  </div>
-                  <div className="flex items-center justify-between mt-4 pt-3 border-t">
-                    <span className="text-xs text-muted-foreground">{invoiceCount} invoice{invoiceCount !== 1 ? "s" : ""}</span>
-                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Button variant="ghost" size="icon" className="h-7 w-7" asChild>
-                        <Link to={`/clients/${c.id}`}><Eye className="h-3.5 w-3.5" /></Link>
-                      </Button>
-                      <ClientFormDialog client={c} onSaved={() => setRefresh((r) => r + 1)} />
-                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleArchive(c.id)}>
-                        <Archive className="h-3.5 w-3.5 text-muted-foreground" />
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
+          {filtered.map((c, i) => (
+            <ClientCard
+              key={c.id}
+              client={c}
+              colorClass={colors[i % colors.length]}
+              getInitials={getInitials}
+              onArchive={handleArchive}
+              onSaved={() => queryClient.invalidateQueries({ queryKey: ["clients"] })}
+            />
+          ))}
         </div>
       ) : (
         <Card className="shadow-sm">
@@ -128,7 +105,7 @@ export default function ClientList() {
                           <Button variant="ghost" size="icon" className="h-7 w-7" asChild>
                             <Link to={`/clients/${c.id}`}><Eye className="h-3.5 w-3.5" /></Link>
                           </Button>
-                          <ClientFormDialog client={c} onSaved={() => setRefresh((r) => r + 1)} />
+                          <ClientFormDialog client={c} onSaved={() => queryClient.invalidateQueries({ queryKey: ["clients"] })} />
                           <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleArchive(c.id)}>
                             <Archive className="h-3.5 w-3.5 text-muted-foreground" />
                           </Button>
@@ -143,6 +120,52 @@ export default function ClientList() {
         </Card>
       )}
     </div>
+  );
+}
+
+function ClientCard({ client: c, colorClass, getInitials, onArchive, onSaved }: {
+  client: Client;
+  colorClass: string;
+  getInitials: (c: Client) => string;
+  onArchive: (id: string) => void;
+  onSaved: () => void;
+}) {
+  const { data: invoices = [] } = useQuery({
+    queryKey: ["invoices-for-client", c.id],
+    queryFn: () => getInvoicesForClient(c.id),
+  });
+
+  return (
+    <Card className="shadow-sm hover:shadow-md transition-shadow group">
+      <CardContent className="pt-6">
+        <div className="flex items-start gap-3">
+          <div className={`h-10 w-10 rounded-full ${colorClass} flex items-center justify-center text-white text-sm font-bold shrink-0`}>
+            {getInitials(c)}
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="font-semibold text-sm truncate">{c.company_name || c.name}</p>
+            {c.name && c.company_name && <p className="text-xs text-muted-foreground truncate">{c.name}</p>}
+          </div>
+        </div>
+        <div className="mt-3 space-y-1 text-xs text-muted-foreground">
+          {c.email && <p className="flex items-center gap-1.5 truncate"><Mail className="h-3 w-3 shrink-0" />{c.email}</p>}
+          {c.phone && <p className="flex items-center gap-1.5"><Phone className="h-3 w-3 shrink-0" />{c.phone}</p>}
+          <p className="flex items-center gap-1.5"><MapPin className="h-3 w-3 shrink-0" />{c.state_name} ({c.state_code})</p>
+        </div>
+        <div className="flex items-center justify-between mt-4 pt-3 border-t">
+          <span className="text-xs text-muted-foreground">{invoices.length} invoice{invoices.length !== 1 ? "s" : ""}</span>
+          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            <Button variant="ghost" size="icon" className="h-7 w-7" asChild>
+              <Link to={`/clients/${c.id}`}><Eye className="h-3.5 w-3.5" /></Link>
+            </Button>
+            <ClientFormDialog client={c} onSaved={onSaved} />
+            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onArchive(c.id)}>
+              <Archive className="h-3.5 w-3.5 text-muted-foreground" />
+            </Button>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -161,7 +184,7 @@ function ClientFormDialog({ client, onSaved }: { client?: Client; onSaved: () =>
 
   const selectedState = INDIAN_STATES.find((s) => s.code === stateCode);
 
-  function handleSave() {
+  async function handleSave() {
     const c: Client = {
       id: client?.id || crypto.randomUUID(),
       name,
@@ -179,7 +202,7 @@ function ClientFormDialog({ client, onSaved }: { client?: Client; onSaved: () =>
       is_archived: false,
       created_at: client?.created_at || new Date().toISOString(),
     };
-    saveClient(c);
+    await saveClient(c);
     toast.success(client ? "Client updated" : "Client added");
     setOpen(false);
     onSaved();
