@@ -248,6 +248,27 @@ app.get("/api/debug/users", async (req, res) => {
   res.json(users);
 });
 
+// TEMPORARY - DELETE AFTER USE
+app.get("/api/reseed-users", async (req, res) => {
+  try {
+    const hash1 = await bcrypt.hash(process.env.USER1_PASSWORD, 12);
+    const hash2 = await bcrypt.hash(process.env.USER2_PASSWORD, 12);
+    await User.findOneAndUpdate(
+      { email: process.env.USER1_EMAIL },
+      { email: process.env.USER1_EMAIL, name: process.env.USER1_NAME, passwordHash: hash1 },
+      { upsert: true }
+    );
+    await User.findOneAndUpdate(
+      { email: process.env.USER2_EMAIL },
+      { email: process.env.USER2_EMAIL, name: process.env.USER2_NAME, passwordHash: hash2 },
+      { upsert: true }
+    );
+    res.json({ success: true, message: "Users reseeded!" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ─── Start Server ─────────────────────────────────────
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Backend running on port ${PORT}`));
