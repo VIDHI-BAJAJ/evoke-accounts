@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,6 +12,7 @@ import { Invoice, InvoiceItem } from "@/lib/types";
 import { Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 function newItem(invoiceId: string): InvoiceItem {
   return {
@@ -34,27 +35,51 @@ function newItem(invoiceId: string): InvoiceItem {
 export default function InvoiceForm() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const clients = getClients().filter((c) => !c.is_archived);
-  const existingInvoice = id ? getInvoice(id) : undefined;
+  const queryClient = useQueryClient();
 
+  const { data: clients = [] } = useQuery({ queryKey: ["clients"], queryFn: getClients });
+  const { data: allInvoices = [] } = useQuery({ queryKey: ["invoices"], queryFn: getInvoices });
+  const { data: existingInvoice } = useQuery({
+    queryKey: ["invoice", id],
+    queryFn: () => getInvoice(id!),
+    enabled: !!id,
+  });
+
+  const activeClients = clients.filter((c) => !c.is_archived);
   const invoiceId = existingInvoice?.id || crypto.randomUUID();
 
-  const [invoiceNumber, setInvoiceNumber] = useState(
-    existingInvoice?.invoice_number || generateInvoiceNumber(getInvoices())
-  );
-  const [invoiceDate, setInvoiceDate] = useState(
-    existingInvoice?.invoice_date || format(new Date(), "yyyy-MM-dd")
-  );
-  const [dueDate, setDueDate] = useState(existingInvoice?.due_date || "");
-  const [clientId, setClientId] = useState(existingInvoice?.client_id || "");
-  const [notes, setNotes] = useState(existingInvoice?.notes || "");
   const defaultTerms = "1. Payment is due within 15 days of the invoice date unless otherwise specified.\n2. Late payments may attract interest at 1.5% per month.\n3. All disputes are subject to Delhi jurisdiction.";
-  const [termsAndConditions, setTermsAndConditions] = useState(existingInvoice?.terms_and_conditions || defaultTerms);
-  const [items, setItems] = useState<InvoiceItem[]>(
-    existingInvoice?.items?.length ? existingInvoice.items : [newItem(invoiceId)]
-  );
 
-  const selectedClient = clients.find((c) => c.id === clientId);
+  const [invoiceNumber, setInvoiceNumber] = useState("");
+  const [invoiceDate, setInvoiceDate] = useState(format(new Date(), "yyyy-MM-dd"));
+  const [dueDate, setDueDate] = useState("");
+  const [clientId, setClientId] = useState("");
+  const [notes, setNotes] = useState("");
+  const [termsAndConditions, setTermsAndConditions] = useState(defaultTerms);
+  const [items, setItems] = useState<InvoiceItem[]>([newItem(invoiceId)]);
+  const [initialized, setInitialized] = useState(false);
+
+  // Initialize form once data is loaded
+  useEffect(() => {
+    if (initialized) return;
+    if (id && !existingInvoice) return; // wait for existing invoice to load
+    if (allInvoices.length === 0 && id) return; // wait for invoices
+
+    if (existingInvoice) {
+      setInvoiceNumber(existingInvoice.invoice_number);
+      setInvoiceDate(existingInvoice.invoice_date);
+      setDueDate(existingInvoice.due_date || "");
+      setClientId(existingInvoice.client_id);
+      setNotes(existingInvoice.notes || "");
+      setTermsAndConditions(existingInvoice.terms_and_conditions || defaultTerms);
+      setItems(existingInvoice.items?.length ? existingInvoice.items : [newItem(existingInvoice.id)]);
+    } else {
+      setInvoiceNumber(generateInvoiceNumber(allInvoices));
+    }
+    setInitialized(true);
+  }, [existingInvoice, allInvoices, id, initialized]);
+
+  const selectedClient = activeClients.find((c) => c.id === clientId);
   const isSameState = selectedClient?.state_code === COMPANY.stateCode;
 
   function recalcItem(item: InvoiceItem): InvoiceItem {
@@ -101,7 +126,7 @@ export default function InvoiceForm() {
     return { subtotal, cgst, sgst, igst, total };
   }, [recalcedItems]);
 
-  function handleSave(status: "draft" | "unpaid") {
+  async function handleSave(status: "draft" | "unpaid") {
     if (!clientId) {
       toast.error("Please select a client");
       return;
@@ -130,7 +155,9 @@ export default function InvoiceForm() {
     };
 
     const finalItems = recalcedItems.map((it) => ({ ...it, invoice_id: invoiceId }));
-    saveInvoice(invoice, finalItems);
+    await saveInvoice(invoice, finalItems);
+    queryClient.invalidateQueries({ queryKey: ["invoices"] });
+    queryClient.invalidateQueries({ queryKey: ["invoice", id] });
     toast.success(status === "draft" ? "Draft saved" : "Invoice saved");
 
     if (status === "unpaid") {
@@ -141,6 +168,7 @@ export default function InvoiceForm() {
   }
 
   return (
+    <>
     <div className="space-y-6 max-w-4xl">
       {/* Section 1: Invoice Meta */}
       <Card className="shadow-sm">
@@ -172,7 +200,7 @@ export default function InvoiceForm() {
               <SelectValue placeholder="Select a client" />
             </SelectTrigger>
             <SelectContent>
-              {clients.map((c) => (
+              {activeClients.map((c) => (
                 <SelectItem key={c.id} value={c.id}>
                   {c.company_name || c.name} {c.state_code ? `(${c.state_name})` : ""}
                 </SelectItem>
@@ -206,27 +234,15 @@ export default function InvoiceForm() {
             <div key={item.id} className="grid gap-3 sm:grid-cols-12 items-end border-b pb-3 last:border-0">
               <div className="sm:col-span-3">
                 <Label className="text-xs">Item Name</Label>
-                <Input
-                  value={item.item_name}
-                  onChange={(e) => updateItem(idx, "item_name", e.target.value)}
-                  placeholder="Service name"
-                />
+                <Input value={item.item_name} onChange={(e) => updateItem(idx, "item_name", e.target.value)} placeholder="Service name" />
               </div>
               <div className="sm:col-span-2">
                 <Label className="text-xs">Description</Label>
-                <Input
-                  value={item.description}
-                  onChange={(e) => updateItem(idx, "description", e.target.value)}
-                  placeholder="Optional"
-                />
+                <Input value={item.description} onChange={(e) => updateItem(idx, "description", e.target.value)} placeholder="Optional" />
               </div>
               <div className="sm:col-span-1">
                 <Label className="text-xs">SAC/HSN</Label>
-                <Input
-                  value={item.hsn_sac}
-                  onChange={(e) => updateItem(idx, "hsn_sac", e.target.value)}
-                  placeholder="998314"
-                />
+                <Input value={item.hsn_sac} onChange={(e) => updateItem(idx, "hsn_sac", e.target.value)} placeholder="998314" />
               </div>
               <div className="sm:col-span-1">
                 <Label className="text-xs">GST %</Label>
@@ -324,5 +340,6 @@ export default function InvoiceForm() {
         </Button>
       </div>
     </div>
+    </>
   );
 }
