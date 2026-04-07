@@ -243,6 +243,11 @@ app.post("/api/invoices/:id/payments", async (req, res) => {
   }
 });
 
+app.get("/api/debug/users", async (req, res) => {
+  const users = await User.find({}, { email: 1, name: 1, _id: 0 });
+  res.json(users);
+});
+
 // ─── Start Server ─────────────────────────────────────
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Backend running on port ${PORT}`));
