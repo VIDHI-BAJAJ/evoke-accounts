@@ -1,21 +1,32 @@
 import { useParams, Link } from "react-router-dom";
-import { getClient, getInvoicesForClient } from "@/lib/store";
+import { getClients, getInvoicesForClient } from "@/lib/store";
 import { formatCurrency } from "@/lib/constants";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 
 export default function ClientDetail() {
   const { id } = useParams();
-  const client = id ? getClient(id) : undefined;
+
+  const { data: clients = [], isLoading } = useQuery({ queryKey: ["clients"], queryFn: getClients });
+  const client = clients.find((c) => c.id === id);
+
+  const { data: invoices = [] } = useQuery({
+    queryKey: ["invoices-for-client", id],
+    queryFn: () => getInvoicesForClient(id!),
+    enabled: !!id,
+  });
+
+  if (isLoading) {
+    return <div className="text-center py-20 text-muted-foreground">Loading...</div>;
+  }
 
   if (!client) {
     return <div className="text-center py-20 text-muted-foreground">Client not found</div>;
   }
-
-  const invoices = getInvoicesForClient(client.id);
 
   return (
     <div className="space-y-6">
