@@ -11,13 +11,52 @@ app.use(cors({
 }));
 app.use(express.json());
 
+// ─── Auto-Sync Users from Env on Every Startup ────────
+async function syncUsersFromEnv() {
+  const envUsers = [];
+  let i = 1;
+  while (true) {
+    const email    = process.env[`USER${i}_EMAIL`];
+    const password = process.env[`USER${i}_PASSWORD`];
+    const name     = process.env[`USER${i}_NAME`] || `User ${i}`;
+    if (!email && !password) break;
+    if (email && password) {
+      envUsers.push({ userId: `user${i}`, email: email.toLowerCase().trim(), name, password });
+    }
+    i++;
+  }
+
+  for (const u of envUsers) {
+    const passwordHash = await bcrypt.hash(u.password, 12);
+    await User.findOneAndUpdate(
+      { userId: u.userId },
+      { userId: u.userId, email: u.email, name: u.name, passwordHash },
+      { upsert: true, new: true }
+    );
+    console.log(`Synced user: ${u.name} <${u.email}>`);
+  }
+
+  // Remove users from MongoDB that no longer exist in env
+  const activeUserIds = envUsers.map(u => u.userId);
+  const deleted = await User.deleteMany({ userId: { $nin: activeUserIds } });
+  if (deleted.deletedCount > 0) {
+    console.log(`Removed ${deleted.deletedCount} user(s) no longer in env`);
+  }
+
+  console.log(`User sync complete — ${envUsers.length} active user(s)`);
+}
+
 // ─── MongoDB Connection ────────────────────────────────
 mongoose.connect(process.env.MONGO_URI)
-  .then(() => console.log("MongoDB connected!"))
+  .then(async () => {
+    console.log("MongoDB connected!");
+    await syncUsersFromEnv();
+  })
   .catch((err) => console.error("MongoDB error:", err));
 
 // ─── Models ───────────────────────────────────────────
 const UserSchema = new mongoose.Schema({
+  userId: { type: String, unique: true, sparse: true }, // stable ID: user1, user2, ...
   email: { type: String, unique: true, required: true, lowercase: true, trim: true },
   name: String,
   passwordHash: String,
@@ -112,6 +151,70 @@ app.post("/api/auth/login", async (req, res) => {
       return res.status(401).json({ error: "Invalid credentials" });
 
     return res.status(200).json({ email: user.email, name: user.name });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Server error" });
+  }
+});
+
+// ─── Change Password ──────────────────────────────────
+app.post("/api/auth/change-password", async (req, res) => {
+  try {
+    const { email, currentPassword, newPassword } = req.body;
+    if (!email || !currentPassword || !newPassword)
+      return res.status(400).json({ error: "Missing fields" });
+
+    if (newPassword.length < 6)
+      return res.status(400).json({ error: "New password must be at least 6 characters" });
+
+    const user = await User.findOne({ email: email.toLowerCase().trim() });
+    if (!user)
+      return res.status(401).json({ error: "Invalid credentials" });
+
+    const isValid = await bcrypt.compare(currentPassword, user.passwordHash);
+    if (!isValid)
+      return res.status(401).json({ error: "Current password is incorrect" });
+
+    const newHash = await bcrypt.hash(newPassword, 12);
+    await User.findOneAndUpdate(
+      { email: email.toLowerCase().trim() },
+      { passwordHash: newHash }
+    );
+
+    console.log(`Password updated for: ${email}`);
+    return res.status(200).json({ success: true, message: "Password updated successfully" });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Server error" });
+  }
+});
+
+// ─── Change Password ──────────────────────────────────
+app.post("/api/auth/change-password", async (req, res) => {
+  try {
+    const { email, currentPassword, newPassword } = req.body;
+    if (!email || !currentPassword || !newPassword)
+      return res.status(400).json({ error: "Missing fields" });
+
+    if (newPassword.length < 6)
+      return res.status(400).json({ error: "New password must be at least 6 characters" });
+
+    const user = await User.findOne({ email: email.toLowerCase().trim() });
+    if (!user)
+      return res.status(401).json({ error: "Invalid credentials" });
+
+    const isValid = await bcrypt.compare(currentPassword, user.passwordHash);
+    if (!isValid)
+      return res.status(401).json({ error: "Current password is incorrect" });
+
+    const newHash = await bcrypt.hash(newPassword, 12);
+    await User.findOneAndUpdate(
+      { email: email.toLowerCase().trim() },
+      { passwordHash: newHash }
+    );
+
+    console.log(`Password updated for: ${email}`);
+    return res.status(200).json({ success: true, message: "Password updated successfully" });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: "Server error" });
@@ -243,27 +346,13 @@ app.post("/api/invoices/:id/payments", async (req, res) => {
   }
 });
 
-app.get("/api/debug/users", async (req, res) => {
-  const users = await User.find({}, { email: 1, name: 1, _id: 0 });
-  res.json(users);
-});
 
-// TEMPORARY - DELETE AFTER USE
-app.get("/api/reseed-users", async (req, res) => {
+// Manual re-sync trigger (call after changing env vars without redeploying)
+app.get("/api/resync-users", async (req, res) => {
   try {
-    const hash1 = await bcrypt.hash(process.env.USER1_PASSWORD, 12);
-    const hash2 = await bcrypt.hash(process.env.USER2_PASSWORD, 12);
-    await User.findOneAndUpdate(
-      { email: process.env.USER1_EMAIL },
-      { email: process.env.USER1_EMAIL, name: process.env.USER1_NAME, passwordHash: hash1 },
-      { upsert: true }
-    );
-    await User.findOneAndUpdate(
-      { email: process.env.USER2_EMAIL },
-      { email: process.env.USER2_EMAIL, name: process.env.USER2_NAME, passwordHash: hash2 },
-      { upsert: true }
-    );
-    res.json({ success: true, message: "Users reseeded!" });
+    await syncUsersFromEnv();
+    const users = await User.find({}, { email: 1, name: 1, userId: 1, _id: 0 });
+    res.json({ success: true, users });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
