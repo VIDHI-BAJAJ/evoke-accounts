@@ -28,11 +28,27 @@ async function syncUsersFromEnv() {
 
   for (const u of envUsers) {
     const passwordHash = await bcrypt.hash(u.password, 12);
+
+    // Step 1: Assign userId to any old record that has this email but no userId
+    await User.updateOne(
+      { email: u.email, userId: { $exists: false } },
+      { $set: { userId: u.userId } }
+    );
+
+    // Step 2: If a different record already owns this userId, remove the email
+    // conflict by deleting the stale duplicate before upserting
+    await User.deleteOne({
+      email: u.email,
+      userId: { $exists: true, $ne: u.userId }
+    });
+
+    // Step 3: Upsert by stable userId — safe now, no duplicate email conflict
     await User.findOneAndUpdate(
       { userId: u.userId },
       { userId: u.userId, email: u.email, name: u.name, passwordHash },
       { upsert: true, new: true }
     );
+
     console.log(`Synced user: ${u.name} <${u.email}>`);
   }
 
