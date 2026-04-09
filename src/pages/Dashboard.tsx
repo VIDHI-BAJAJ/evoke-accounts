@@ -110,7 +110,7 @@ export default function Dashboard() {
             <div className="flex items-center justify-between">
               <CardTitle className="text-base">Recent Invoices</CardTitle>
               <Button asChild variant="ghost" size="sm" className="text-primary">
-                <Link to="/invoices">View All</Link>
+                <Link to="/totalinvoices">View All</Link>
               </Button>
             </div>
           </CardHeader>
