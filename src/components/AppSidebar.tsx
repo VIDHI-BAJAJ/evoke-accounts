@@ -6,7 +6,8 @@ import { useState, useEffect } from "react";
 
 const items = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard },
-  { title: "Invoices", url: "/invoices", icon: FileText },
+  { title: " New Invoices", url: "/invoices", icon: FileText },
+  { title: "Invoices", url: "/totalinvoices", icon: FileText },
   { title: "Clients", url: "/clients", icon: Users },
   { title: "Settings", url: "/settings", icon: Settings },
 ];

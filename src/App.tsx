@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AppLayout } from "@/components/AppLayout";
 import Dashboard from "@/pages/Dashboard";
 import InvoiceList from "@/pages/InvoiceList";
+import Totalinovice from "@/pages/totalInvoice"
 import InvoiceForm from "@/pages/InvoiceForm";
 import InvoicePreview from "@/pages/InvoicePreview";
 import ClientList from "@/pages/ClientList";
@@ -33,6 +34,7 @@ const App = () => (
           <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
             <Route path="/" element={<Dashboard />} />
             <Route path="/invoices" element={<InvoiceList />} />
+            <Route path="/totalinvoices" element={<Totalinovice />} />
             <Route path="/invoices/new" element={<InvoiceForm />} />
             <Route path="/invoices/:id/edit" element={<InvoiceForm />} />
             <Route path="/invoices/:id" element={<InvoicePreview />} />
