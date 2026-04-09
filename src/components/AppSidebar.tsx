@@ -1,4 +1,4 @@
-import { LayoutDashboard, FileText, Users, Settings, ChevronLeft, ChevronRight } from "lucide-react";
+import { LayoutDashboard, FileText, SquarePen, Users, Settings, ChevronLeft, ChevronRight } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import logoWhite from "@/assets/ai-evoked-logo-white.png";
@@ -6,7 +6,7 @@ import { useState, useEffect } from "react";
 
 const items = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard },
-  { title: " New Invoices", url: "/invoices", icon: FileText },
+  { title: " New Invoices", url: "/invoices", icon: SquarePen},
   { title: "Invoices", url: "/totalinvoices", icon: FileText },
   { title: "Clients", url: "/clients", icon: Users },
   { title: "Settings", url: "/settings", icon: Settings },
